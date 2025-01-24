@@ -1,6 +1,9 @@
 from django.contrib import admin
+from django.contrib.auth import get_user_model
 
 from .models import Ingredient, Recipe
+
+User = get_user_model()
 
 
 # Register your models here.
@@ -10,13 +13,27 @@ class IngredientAdmin(admin.ModelAdmin):
     list_editable = ('name', 'measurement_unit')
 
 
-class RecipeAdmin(admin.ModelAdmin):
+# @admin.register(Recipe)
+# class RecipeAdmin(admin.ModelAdmin):
+#     list_display = (
+#         'id',
+#         'author',
+#         'name',
+#         'image',
+#         'description',
+#         'ingredients',
+#         'created_at',
+#     )
+
+
+@admin.register(User)
+class UserAdmin(admin.ModelAdmin):
     list_display = (
         'id',
-        'author',
-        'name',
-        'image',
-        'description',
-        'ingredients',
-        'created_at',
+        'email',
+        'username',
+        'first_name',
+        'last_name',
+        'is_staff',
+        'is_active'
     )

@@ -66,4 +66,10 @@ class Subscription(models.Model):
     )
 
     class Meta:
-        unique_together = ('user', 'subscribing')
+        constraints = (
+            models.UniqueConstraint(
+                fields=("user", "subscribing"), name="unique_subscription"),
+        )
+
+    def __str__(self):
+        return f"{self.user} подписан на {self.subscribing}"
