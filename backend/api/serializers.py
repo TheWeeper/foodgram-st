@@ -4,7 +4,7 @@ from djoser.serializers import UserSerializer
 from rest_framework import serializers
 from rest_framework.exceptions import ValidationError
 
-from recipes.models import Recipe, RecipeIngredient, Ingredient, Subscription
+from recipes.models import Recipe, RecipeIngredient, Ingredient
 
 User = get_user_model()
 
