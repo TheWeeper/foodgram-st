@@ -147,11 +147,16 @@ REST_FRAMEWORK = {
 }
 
 DJOSER = {
-    'LOGIN_FIELD': 'email',
     'SERIALIZERS': {
         'user': 'api.serializers.FoodgramUserSerializer',
         'current_user': 'api.serializers.FoodgramUserSerializer',
     },
+    'PERMISSIONS': {
+        'user_list': ('rest_framework.permissions.IsAuthenticatedOrReadOnly',),
+        'user_detail': ('rest_framework.permissions.IsAuthenticatedOrReadOnly',),
+        'user': ('rest_framework.permissions.IsAuthenticatedOrReadOnly',),
+        'current_user': ('rest_framework.permissions.IsAuthenticatedOrReadOnly',),
+    }
 }
 
 MEDIA_URL = '/media/'

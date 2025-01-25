@@ -3,17 +3,22 @@ from django.conf import settings
 from django.contrib.auth.models import AbstractUser
 from django.db import models
 
-MIN_COOKING_TIME = 1
-
 
 # Create your models here.
 class FoodgramUser(AbstractUser):
     username = models.CharField('Никнейм', max_length=254, unique=True)
-    first_name = models.CharField('Имя', max_length=150, blank=True)
-    last_name = models.CharField('Фамилия', max_length=150, blank=True)
-    email = models.EmailField('Электронная почта', blank=True, unique=True)
+    first_name = models.CharField('Имя', max_length=150)
+    last_name = models.CharField('Фамилия', max_length=150)
+    email = models.EmailField('Электронная почта', unique=True)
     avatar = models.ImageField(
         'Аватарка', blank=True, upload_to='avatar_images')
+    USERNAME_FIELD = 'email'
+    REQUIRED_FIELDS = ('username', 'first_name', 'last_name')
+
+    class Meta:
+        verbose_name = 'пользователь'
+        verbose_name_plural = 'Пользователи'
+        ordering = ('username',)
 
 
 class Ingredient(models.Model):
@@ -36,11 +41,16 @@ class Recipe(models.Model):
     )
     name = models.CharField('Название', max_length=150)
     image = models.ImageField('Изображение', blank=True)
-    description = models.TextField('Описание рецепта')
-    ingredients = models.ManyToManyField(Ingredient, verbose_name='Ингредиеты')
+    text = models.TextField('Описание рецепта')
+    ingredients = models.ManyToManyField(
+        Ingredient,
+        verbose_name='Ингредиеты',
+        through='RecipeIngredient',
+        related_name='recipes',
+    )
     cooking_time = models.PositiveIntegerField(
         'Время приготовления',
-        validators=(MinValueValidator(MIN_COOKING_TIME),)
+        validators=(MinValueValidator(1),)
     )
     created_at = models.DateTimeField(auto_now_add=True)
 
@@ -61,7 +71,7 @@ class Subscription(models.Model):
     )
     subscribing = models.ForeignKey(
         settings.AUTH_USER_MODEL, on_delete=models.CASCADE,
-        related_name='subscribers',
+        related_name='subscriber',
         verbose_name='Автор'
     )
 
@@ -73,3 +83,59 @@ class Subscription(models.Model):
 
     def __str__(self):
         return f"{self.user} подписан на {self.subscribing}"
+
+
+class RecipeIngredient(models.Model):
+    recipe = models.ForeignKey(
+        Recipe,
+        on_delete=models.CASCADE,
+        related_name='recipe_ingredients'
+    )
+    ingredient = models.ForeignKey(
+        Ingredient,
+        on_delete=models.CASCADE,
+        related_name='recipe_ingredients'
+    )
+    amount = models.PositiveIntegerField(validators=(MinValueValidator(1),))
+
+
+class ShoppingCart(models.Model):
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        verbose_name='Пользователь',
+        related_name='shopping_cart'
+    )
+    recipe = models.ForeignKey(
+        Recipe,
+        on_delete=models.CASCADE,
+        verbose_name='Рецепт',
+        related_name='shopping_cart',
+    )
+
+    class Meta:
+        constraints = (
+            models.UniqueConstraint(
+                fields=("user", "recipe"), name="unique_shopping_cart"),
+        )
+
+
+class FavoriteRecipe(models.Model):
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        verbose_name='Пользователь',
+        related_name='favorites',
+    )
+    recipe = models.ForeignKey(
+        Recipe,
+        on_delete=models.CASCADE,
+        verbose_name='Рецепт',
+        related_name='favorites',
+    )
+
+    # class Meta:
+    #     constraints = (
+    #         models.UniqueConstraint(
+    #             fields=("user", "recipe"), name="unique_favorite_recipe"),
+    #     )
