@@ -8,9 +8,9 @@ from django.db import models
 class FoodgramUser(AbstractUser):
     username = models.CharField(
         'Никнейм',
-        max_length=254,
+        max_length=150,
         unique=True,
-        validators=(RegexValidator('^[\w.@+-]+\z'),)
+        validators=(RegexValidator('^[\w.@+-]+$'),)
     )
     first_name = models.CharField('Имя', max_length=150)
     last_name = models.CharField('Фамилия', max_length=150)
@@ -47,7 +47,6 @@ class Recipe(models.Model):
     name = models.CharField('Название', max_length=150)
     image = models.ImageField(
         'Изображение',
-        blank=True,
         upload_to='recipe_images'
     )
     text = models.TextField('Описание рецепта')

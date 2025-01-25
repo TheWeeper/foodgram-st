@@ -12,7 +12,7 @@ from .filters import RecipeFilter
 from .permissions import IsAuthorOrReadOnly
 from .serializers import (
     FoodgramUserSerializer, RecipeSerializer, RecipeResponseSerializer,
-    IngredientSerializer, UserAvatarSerializer, SubscriptionSerializer,
+    IngredientSerializer, UserAvatarSerializer,
     UserRecipesSerializer)
 from recipes.models import (
     FavoriteRecipe, Recipe, RecipeIngredient,
@@ -44,6 +44,13 @@ class FoodgramUserViewSet(UserViewSet):
     def get_queryset(self):
         return User.objects.all()
 
+    @action(detail=False, methods=('get',), url_path='me',
+            permission_classes=(permissions.IsAuthenticated,))
+    def me(self, request):
+        user = request.user
+        serializer = self.get_serializer(user)
+        return Response(serializer.data)
+
     @action(detail=False, methods=('put', 'delete'), url_path='me/avatar',
             permission_classes=(permissions.IsAuthenticated,))
     def avatar(self, request):
@@ -63,9 +70,15 @@ class FoodgramUserViewSet(UserViewSet):
     @action(detail=False, methods=('get',), url_path='subscriptions',
             permission_classes=(permissions.IsAuthenticated,))
     def subscriptions(self, request):
-        subscriptions = Subscription.objects.filter(user=request.user)
-        serializer = SubscriptionSerializer(subscriptions, many=True)
-        return Response(serializer.data, status=status.HTTP_200_OK)
+        subscriptions = User.objects.filter(subscriber__user=request.user)
+        paginated_subscriptions = self.paginate_queryset(subscriptions)
+        recipes_limit = request.query_params.get('recipes_limit')
+        serializer = UserRecipesSerializer(
+            paginated_subscriptions, many=True,
+            context={'request': request,
+                     'recipes_limit': recipes_limit}
+        )
+        return self.get_paginated_response(serializer.data)
 
     @action(detail=True, methods=('post', 'delete'), url_path='subscribe')
     def subscribe(self, request, id=None):
@@ -74,11 +87,22 @@ class FoodgramUserViewSet(UserViewSet):
         subscription = Subscription.objects.filter(user=user,
                                                    subscribing=author)
         if request.method == 'POST':
-            if user == author or subscription.exists():
-                return Response(status=status.HTTP_400_BAD_REQUEST)
+            if user == author:
+                return Response(
+                    'Вы не можете подписаться сами на себя',
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+            if subscription.exists():
+                return Response(
+                    'Вы уже подписаны на этого пользователя',
+                    status=status.HTTP_400_BAD_REQUEST
+                )
             Subscription.objects.create(user=user, subscribing=author)
-            serializer = UserRecipesSerializer(author,
-                                               context={'request': request})
+            recipes_limit = request.query_params.get('recipes_limit')
+            serializer = UserRecipesSerializer(
+                author, context={'request': request,
+                                 'recipes_limit': recipes_limit})
+            
             return Response(serializer.data, status=status.HTTP_201_CREATED)
         elif request.method == "DELETE":
             if subscription.exists():
@@ -90,7 +114,8 @@ class FoodgramUserViewSet(UserViewSet):
 class RecipeViewSet(viewsets.ModelViewSet):
     queryset = Recipe.objects.all()
     serializer_class = RecipeSerializer
-    permission_classes = (IsAuthorOrReadOnly,)
+    permission_classes = (
+        permissions.IsAuthenticatedOrReadOnly, IsAuthorOrReadOnly,)
     filter_backends = (DjangoFilterBackend,)
     filterset_class = RecipeFilter
 
@@ -107,7 +132,7 @@ class RecipeViewSet(viewsets.ModelViewSet):
         short_url = request.build_absolute_uri(reverse(
             'api:get_recipe', kwargs={'recipe_id': pk}
         ))
-        return Response({'short_link': short_url})
+        return Response({'short-link': short_url})
 
     @action(detail=True, methods=('post', 'delete'), url_path='favorite',
             permission_classes=(permissions.IsAuthenticated,))
@@ -125,7 +150,7 @@ class RecipeViewSet(viewsets.ModelViewSet):
             if favorite.exists():
                 favorite.delete()
                 return Response(status=status.HTTP_204_NO_CONTENT)
-            return Response(status=status.HTTP_404_NOT_FOUND)
+            return Response(status=status.HTTP_400_BAD_REQUEST)
 
     @action(detail=True, methods=('post', 'delete'), url_path='shopping_cart',
             permission_classes=(permissions.IsAuthenticated,))
@@ -143,7 +168,7 @@ class RecipeViewSet(viewsets.ModelViewSet):
             if shopping_cart.exists():
                 shopping_cart.delete()
                 return Response(status=status.HTTP_204_NO_CONTENT)
-            return Response(status=status.HTTP_404_NOT_FOUND)
+            return Response(status=status.HTTP_400_BAD_REQUEST)
 
     @action(detail=False, methods=('get',), url_path='download_shopping_cart',
             permission_classes=(permissions.IsAuthenticated,))
