@@ -31,9 +31,10 @@ class FoodgramUserSerializer(UserSerializer):
         )
 
     def get_is_subscribed(self, obj):
-        user = self.context.get("request").user
+        print(self.context)
+        user = self.context.get('request').user
         if user.is_authenticated:
-            return obj.subscribing.filter(user=user).exists()
+            return obj.subscriber.filter(user=user).exists()
 
 
 class UserAvatarSerializer(serializers.ModelSerializer):
@@ -61,7 +62,7 @@ class SubscriptionSerializer(serializers.ModelSerializer):
 
 
 class RecipeIngredientSerializer(serializers.ModelSerializer):
-    id = serializers.IntegerField(source='ingredient.id', read_only=True)
+    id = serializers.IntegerField(source='ingredient.id')
     name = serializers.CharField(source='ingredient.name', read_only=True)
     measurement_unit = serializers.CharField(
         source='ingredient.measurement_unit', read_only=True)
@@ -115,7 +116,8 @@ class RecipeSerializer(serializers.ModelSerializer):
         ingredients = (
             RecipeIngredient(
                 recipe=recipe,
-                ingredient=item.get('id'),
+                ingredient=Ingredient.objects.get(pk=item.get('ingredient')
+                                                  .get('id')),
                 amount=item.get('amount'),
             ) for item in ingredients_data
         )
@@ -148,6 +150,7 @@ class UserRecipesSerializer(FoodgramUserSerializer):
     recipes_count = serializers.SerializerMethodField()
 
     class Meta:
+        model = User
         fields = (
             'email',
             'id',

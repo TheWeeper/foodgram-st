@@ -39,8 +39,10 @@ class IngredientViewSet(viewsets.ReadOnlyModelViewSet):
 
 
 class FoodgramUserViewSet(UserViewSet):
-    queryset = User.objects.all()
     serializer_class = FoodgramUserSerializer
+
+    def get_queryset(self):
+        return User.objects.all()
 
     @action(detail=False, methods=('put', 'delete'), url_path='me/avatar',
             permission_classes=(permissions.IsAuthenticated,))
@@ -66,16 +68,18 @@ class FoodgramUserViewSet(UserViewSet):
         return Response(serializer.data, status=status.HTTP_200_OK)
 
     @action(detail=True, methods=('post', 'delete'), url_path='subscribe')
-    def subscribe(self, request, pk=None):
+    def subscribe(self, request, id=None):
         user = request.user
-        author = get_object_or_404(User, pk=pk)
-        subscription = Subscription.objects.filter(user=user, author=author)
+        author = get_object_or_404(User, id=id)
+        subscription = Subscription.objects.filter(user=user,
+                                                   subscribing=author)
         if request.method == 'POST':
             if user == author or subscription.exists():
                 return Response(status=status.HTTP_400_BAD_REQUEST)
-            Subscription.objects.create(user=user, author=author)
-            serializer = UserRecipesSerializer(author)
-            return Response(serializer, status=status.HTTP_201_CREATED)
+            Subscription.objects.create(user=user, subscribing=author)
+            serializer = UserRecipesSerializer(author,
+                                               context={'request': request})
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
         elif request.method == "DELETE":
             if subscription.exists():
                 subscription.delete()
@@ -86,8 +90,7 @@ class FoodgramUserViewSet(UserViewSet):
 class RecipeViewSet(viewsets.ModelViewSet):
     queryset = Recipe.objects.all()
     serializer_class = RecipeSerializer
-    permission_classes = (
-        permissions.IsAuthenticatedOrReadOnly, IsAuthorOrReadOnly)
+    permission_classes = (IsAuthorOrReadOnly,)
     # filter_backends = (DjangoFilterBackend,)
     # filterset_fields = ('is_favorited', 'is_in_shopping_cart', 'author')
 
