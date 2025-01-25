@@ -8,7 +8,7 @@ from rest_framework import filters, viewsets, permissions, status
 from rest_framework.decorators import action
 from rest_framework.response import Response
 
-
+from .filters import RecipeFilter
 from .permissions import IsAuthorOrReadOnly
 from .serializers import (
     FoodgramUserSerializer, RecipeSerializer, RecipeResponseSerializer,
@@ -91,8 +91,8 @@ class RecipeViewSet(viewsets.ModelViewSet):
     queryset = Recipe.objects.all()
     serializer_class = RecipeSerializer
     permission_classes = (IsAuthorOrReadOnly,)
-    # filter_backends = (DjangoFilterBackend,)
-    # filterset_fields = ('is_favorited', 'is_in_shopping_cart', 'author')
+    filter_backends = (DjangoFilterBackend,)
+    filterset_class = RecipeFilter
 
     def perform_create(self, serializer):
         serializer.save(author=self.request.user)
@@ -144,7 +144,7 @@ class RecipeViewSet(viewsets.ModelViewSet):
                 shopping_cart.delete()
                 return Response(status=status.HTTP_204_NO_CONTENT)
             return Response(status=status.HTTP_404_NOT_FOUND)
-        
+
     @action(detail=False, methods=('get',), url_path='download_shopping_cart',
             permission_classes=(permissions.IsAuthenticated,))
     def download_shopping_cart(self, request):
