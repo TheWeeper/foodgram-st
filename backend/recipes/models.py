@@ -84,10 +84,9 @@ class Subscription(models.Model):
     )
 
     class Meta:
-        constraints = (
-            models.UniqueConstraint(
-                fields=("user", "subscribing"), name="unique_subscription"),
-        )
+        verbose_name = 'подписка'
+        verbose_name_plural = 'Подписки'
+
 
     def __str__(self):
         return f"{self.user} подписан на {self.subscribing}"
@@ -122,10 +121,8 @@ class ShoppingCart(models.Model):
     )
 
     class Meta:
-        constraints = (
-            models.UniqueConstraint(
-                fields=("user", "recipe"), name="unique_shopping_cart"),
-        )
+        verbose_name = 'корзина покупок'
+        verbose_name_plural = 'Корзины покупок'
 
 
 class FavoriteRecipe(models.Model):
@@ -142,8 +139,6 @@ class FavoriteRecipe(models.Model):
         related_name='favorites',
     )
 
-    # class Meta:
-    #     constraints = (
-    #         models.UniqueConstraint(
-    #             fields=("user", "recipe"), name="unique_favorite_recipe"),
-    #     )
+    class Meta:
+        verbose_name = 'избранный рецепт'
+        verbose_name_plural = 'Избранные рецепты'

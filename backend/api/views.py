@@ -142,7 +142,10 @@ class RecipeViewSet(viewsets.ModelViewSet):
         favorite = FavoriteRecipe.objects.filter(user=user, recipe=recipe)
         if request.method == 'POST':
             if favorite.exists():
-                return Response(status=status.HTTP_400_BAD_REQUEST)
+                return Response(
+                    'Вы уже добавили этот рецепт в избранное',
+                    status=status.HTTP_400_BAD_REQUEST
+                )
             serializer = RecipeResponseSerializer(recipe)
             FavoriteRecipe.objects.create(user=user, recipe=recipe)
             return Response(serializer.data, status=status.HTTP_201_CREATED)
