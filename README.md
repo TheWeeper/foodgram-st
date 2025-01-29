@@ -8,7 +8,7 @@ git clone git@github.com:TheWeeper/foodgram-st.git
 ```
 Перейдите в директорию ```infra```, создайте файл ```.env``` и заполните его на примере ```.env.example```
 ```
-cd infra
+cd foodgram-st/infra/
 touch .env
 ```
 Запустите проект
