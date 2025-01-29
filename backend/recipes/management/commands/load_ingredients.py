@@ -14,17 +14,17 @@ class Command(BaseCommand):
         try:
             json_file_path = os.path.join(settings.BASE_DIR, 'data', file_name)
             with open(json_file_path, encoding='utf-8') as file:
-                data = json.load(file)
-
-            ingredients = [
-                Ingredient(name=item['name'],
-                           measurement_unit=item['measurement_unit'])
-                for item in data
-            ]
-
-            Ingredient.objects.bulk_create(ingredients, ignore_conflicts=True)
+                ingredients = Ingredient.objects.bulk_create(
+                    [Ingredient(**item) for item in json.load(file)],
+                    ignore_conflicts=True
+                )
             self.stdout.write(
-                self.style.SUCCESS('Ингредиенты успешно загружены!'))
+                self.style.SUCCESS(
+                    'Ингредиенты успешно загружены! '
+                    f'Загружено {len(ingredients)}'
+                ))
 
         except Exception as e:
-            self.stderr.write(self.style.ERROR(f'Ошибка при загрузке: {e}'))
+            self.stderr.write(self.style.ERROR(
+                f'Ошибка при загрузке {json_file_path}: {e}'
+            ))

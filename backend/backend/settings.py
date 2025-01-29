@@ -42,8 +42,8 @@ INSTALLED_APPS = [
     'rest_framework',
     'rest_framework.authtoken',
     'django_filters',
-    'api.apps.ApiConfig',
     'recipes.apps.RecipesConfig',
+    'api.apps.ApiConfig',
 ]
 
 MIDDLEWARE = [
@@ -151,7 +151,7 @@ REST_FRAMEWORK = {
         'rest_framework.authentication.TokenAuthentication',
     ],
 
-    'DEFAULT_PAGINATION_CLASS': 'api.paginations.CustomPagination',
+    'DEFAULT_PAGINATION_CLASS': 'api.paginations.FoodgramPagination',
     'PAGE_SIZE': 6,
 }
 
