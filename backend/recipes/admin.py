@@ -11,15 +11,19 @@ from .models import (
 User = get_user_model()
 
 
+class GetRecipesMixin(admin.ModelAdmin):
+
+    @admin.display(description='Количество рецептов')
+    def get_recipes(self, model):
+        return model.recipes.count()
+
+
 @admin.register(Ingredient)
-class IngredientAdmin(admin.ModelAdmin):
-    list_display = ('id', 'name', 'measurement_unit', 'get_in_recipes')
+class IngredientAdmin(GetRecipesMixin):
+    list_display = ('id', 'name', 'measurement_unit', 'get_recipes')
     list_editable = ('name', 'measurement_unit')
     search_fields = ('name', 'measurement_unit')
     list_filter = ('measurement_unit',)
-
-    def get_in_recipes(self, ingredient):
-        return ingredient.recipe_ingredients.count()
 
 
 class RecipeIngredientInline(admin.TabularInline):
@@ -42,18 +46,20 @@ class RecipeAdmin(admin.ModelAdmin):
     list_filter = ('author', CookingTimeFilter)
     inlines = (RecipeIngredientInline,)
 
+    @admin.display(description='В избранном')
     def get_in_favorites(self, recipe):
         return recipe.favoriterecipes.count()
 
+    @admin.display(description='Продукты')
     @mark_safe
     def get_ingredients(self, recipe):
-        ingredients = recipe.recipe_ingredients.all()
         return '<br>'.join(
             f'- {ingredient.ingredient.name} {ingredient.amount} '
             f'{ingredient.ingredient.measurement_unit}'
-            for ingredient in ingredients
+            for ingredient in recipe.recipe_ingredients.all()
         )
 
+    @admin.display(description='Изображение')
     @mark_safe
     def get_image(self, recipe):
         if recipe.image:
@@ -62,7 +68,7 @@ class RecipeAdmin(admin.ModelAdmin):
 
 
 @admin.register(User)
-class FoodgramUserAdmin(UserAdmin):
+class FoodgramUserAdmin(UserAdmin, GetRecipesMixin):
     list_display = (
         'id',
         'username',
@@ -74,9 +80,11 @@ class FoodgramUserAdmin(UserAdmin):
         'get_subscribers',
     )
 
+    @admin.display(description='ФИО')
     def full_name(self, user):
         return f'{user.first_name} {user.last_name}'
 
+    @admin.display(description='Аватар')
     @mark_safe
     def get_avatar(self, user):
         if user.avatar:
@@ -84,12 +92,11 @@ class FoodgramUserAdmin(UserAdmin):
                     'style="width:50 px;border-radius:50%;" />')
         return 'Нет аватара'
 
-    def get_recipes(self, user):
-        return user.recipes.count()
-
+    @admin.display(description='Количество подписок')
     def get_subscriptions(self, user):
         return user.subscribers.count()
 
+    @admin.display(description='Количество подписчиков')
     def get_subscribers(self, user):
         return user.authors.count()
 

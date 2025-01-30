@@ -26,5 +26,5 @@ class Command(BaseCommand):
 
         except Exception as e:
             self.stderr.write(self.style.ERROR(
-                f'Ошибка при загрузке {json_file_path}: {e}'
+                f'Ошибка при загрузке {file_name}: {e}'
             ))

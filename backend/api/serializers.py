@@ -45,13 +45,14 @@ class UserAvatarSerializer(serializers.ModelSerializer):
         fields = ('avatar',)
 
     def validate(self, data):
-        if data.get('avatar') is None:
+        if not data.get('avatar'):
             raise ValidationError('Необходимо передать изображение')
         return super().validate(data)
 
 
 class RecipeIngredientSerializer(serializers.ModelSerializer):
-    id = serializers.IntegerField(source='ingredient.id')
+    id = serializers.PrimaryKeyRelatedField(
+        queryset=Ingredient.objects.all(), source='ingredient')
     name = serializers.CharField(source='ingredient.name', read_only=True)
     measurement_unit = serializers.CharField(
         source='ingredient.measurement_unit', read_only=True)
@@ -65,11 +66,6 @@ class RecipeIngredientSerializer(serializers.ModelSerializer):
             'measurement_unit',
             'amount',
         )
-
-    def validate_id(self, id):
-        if not Ingredient.objects.filter(pk=id).exists():
-            raise ValidationError(f'Ингредиент с {id} не найден.')
-        return id
 
 
 class RecipeSerializer(serializers.ModelSerializer):
@@ -94,38 +90,25 @@ class RecipeSerializer(serializers.ModelSerializer):
             'cooking_time',
         )
 
-    def validate(self, data):
-        if 'recipe_ingredients' not in data:
-            raise ValidationError('Поле ingredients обязательно для заполнения')
-        return super().validate(data)
-
     def validate_ingredients(self, ingredients):
         if not ingredients:
             raise ValidationError('Необходимо указать хотя бы один ингредиент')
         ingredient_ids = [
             ingredient.get('ingredient')
-            .get('id') for ingredient in ingredients]
+            for ingredient in ingredients]
         dublicate_ids = [
             ingredient_id for ingredient_id in set(ingredient_ids)
             if ingredient_ids.count(ingredient_id) > 1
         ]
         if dublicate_ids:
             raise ValidationError(
-                'Некоторые ингредиенты повторяются: '
+                'Ингредиенты повторяются: '
                 f'{dublicate_ids}'
-            )
-        existing_ingredients = Ingredient.objects.filter(
-            id__in=ingredient_ids).values_list('id', flat=True)
-        missing_ingredients = set(ingredient_ids) - set(existing_ingredients)
-        if missing_ingredients:
-            raise ValidationError(
-                'Некоторые ингредиенты не найдены: '
-                f'{missing_ingredients}'
             )
         return ingredients
 
     def validate_image(self, image):
-        if image is None:
+        if not image:
             raise ValidationError('Необходимо добавить изображение')
         return image
 
@@ -142,17 +125,10 @@ class RecipeSerializer(serializers.ModelSerializer):
         return super().update(instance, validated_data)
 
     def save_ingredients(self, recipe, ingredients_data):
-        ingredient_ids = (
-            ingredient['ingredient']['id'] for ingredient in ingredients_data
-        )
-        ingredient_dict = {
-            ingredient.id: ingredient
-            for ingredient in Ingredient.objects.filter(id__in=ingredient_ids)
-        }
         RecipeIngredient.objects.bulk_create(
             RecipeIngredient(
                 recipe=recipe,
-                ingredient=ingredient_dict[ingredient['ingredient']['id']],
+                ingredient=ingredient['ingredient'],
                 amount=ingredient['amount'],
             )
             for ingredient in ingredients_data
@@ -204,7 +180,9 @@ class UserRecipesSerializer(FoodgramUserSerializer):
 
     def get_recipes(self, user):
         return RecipeResponseSerializer(
-            user.recipes.all()[:int(self.context['request'].query_params.get('recipes_limit', 10**10))],
+            user.recipes.all()[:int(
+                self.context['request'].query_params.get(
+                    'recipes_limit', 10**10))],
             many=True,
             context=self.context
         ).data

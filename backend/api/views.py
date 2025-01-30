@@ -6,6 +6,7 @@ from django_filters.rest_framework import DjangoFilterBackend
 from djoser.views import UserViewSet
 from rest_framework import filters, viewsets, permissions, status
 from rest_framework.decorators import action
+from rest_framework.exceptions import ValidationError
 from rest_framework.response import Response
 
 from .filters import RecipeFilter
@@ -83,11 +84,9 @@ class FoodgramUserViewSet(UserViewSet):
         subscription = Subscription.objects.filter(user=user, author=author)
         if request.method == 'POST':
             if user == author:
-                return Response('Вы не можете подписаться сами на себя',
-                                status=status.HTTP_400_BAD_REQUEST)
+                raise ValidationError('Вы не можете подписаться сами на себя')
             if subscription.exists():
-                return Response('Вы уже подписаны на этого пользователя',
-                                status=status.HTTP_400_BAD_REQUEST)
+                raise ValidationError('Вы уже подписаны на этого пользователя')
             Subscription.objects.create(user=user, author=author)
             serializer = UserRecipesSerializer(
                 author, context={'request': request})
@@ -111,24 +110,27 @@ class RecipeViewSet(viewsets.ModelViewSet):
     @action(detail=True, methods=('get',), url_path='get-link')
     def get_link(self, request, pk=None):
         get_object_or_404(Recipe, pk=pk)
-        short_url = request.build_absolute_uri(reverse(
-            'recipes:get_recipe', args={pk}
-        ))
-        return Response({'short-link': short_url})
+        return Response({
+            'short-link': request.build_absolute_uri(
+                reverse('recipes:get_recipe', args=(self.get_object().pk,))
+            )
+        })
 
     @staticmethod
     def handle_recipe(model_class, request, pk):
         recipe = get_object_or_404(Recipe, pk=pk)
         user = request.user
         if request.method == 'POST':
-            serializer = RecipeResponseSerializer(recipe)
             relation, created = model_class.objects.get_or_create(
                 user=user, recipe=recipe)
             if not created:
-                return Response(status=status.HTTP_400_BAD_REQUEST)
-            return Response(serializer.data, status=status.HTTP_201_CREATED)
+                raise ValidationError('Вы уже добавили этот рецепт')
+            return Response(
+                RecipeResponseSerializer(recipe).data,
+                status=status.HTTP_201_CREATED
+            )
         elif request.method == 'DELETE':
-            get_object_or_404(model_class, user=user, recipe=recipe)
+            get_object_or_404(model_class, user=user, recipe=recipe).delete()
             return Response(status=status.HTTP_204_NO_CONTENT)
 
     @action(detail=True, methods=('post', 'delete'), url_path='favorite',
@@ -147,18 +149,18 @@ class RecipeViewSet(viewsets.ModelViewSet):
         user = request.user
         ingredients = (
             RecipeIngredient.objects
-            .filter(recipe__shoppingcarts__user=user)
+            .filter(recipe__in=user.shoppingcarts.values('recipe'))
             .values('ingredient__name', 'ingredient__measurement_unit')
             .annotate(amount_total=Sum('amount'))
             .order_by('ingredient__name')
         )
+        print(ingredients)
         recipes = (
             Recipe.objects
             .filter(shoppingcarts__user=user)
-            .values_list('name', flat=True)
         )
         return FileResponse(
-            render_shopping_list(ingredients, recipes),
+            render_shopping_list(ingredients, recipes, user),
             as_attachment=True,
             filename='Shopping_list.txt',
             content_type='text/plain',
