@@ -2,14 +2,13 @@ from datetime import datetime
 
 INGREDIENT_ITEM = '{i}. {name} {amount} {measurement_unit}'
 RECIPE_ITEM = '{i}. {name}'
-LIST_HEADER = 'Список покупок {first_name} {last_name} на {date}'
+LIST_HEADER = 'Список покупок {username} на {date}'
 
 
 def render_shopping_list(ingredients, recipes, user):
     return '\n'.join([
         LIST_HEADER.format(
-            first_name=user.first_name,
-            last_name=user.last_name,
+            username=user.username,
             date=datetime.now()
         ),
         'Продукты',

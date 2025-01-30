@@ -119,7 +119,7 @@ class RecipeIngredient(models.Model):
     ingredient = models.ForeignKey(
         Ingredient,
         on_delete=models.CASCADE,
-        related_name='ingredients'
+        related_name='recipe_ingredients'
     )
     amount = models.PositiveIntegerField(
         validators=(MinValueValidator(MIN_AMOUNT),))
@@ -141,30 +141,24 @@ class UserRecipeRelation(models.Model):
 
     class Meta:
         abstract = True
+        constraints = (
+            models.UniqueConstraint(
+                fields=('user', 'recipe'),
+                name='unique_%(class)s'
+            ),
+        )
 
     def str(self):
         return f'{self.user} - {self.recipe}'
 
 
-class ShoppingCart(UserRecipeRelation):
+class ShoppingCart(UserRecipeRelation, UserRecipeRelation.Meta):
     class Meta:
         verbose_name = 'корзина покупок'
         verbose_name_plural = 'Корзины покупок'
-        constraints = (
-            models.UniqueConstraint(
-                fields=('user', 'recipe'),
-                name='unique_shoppingcart'
-            ),
-        )
 
 
-class FavoriteRecipe(UserRecipeRelation):
+class FavoriteRecipe(UserRecipeRelation, UserRecipeRelation.Meta):
     class Meta:
         verbose_name = 'избранный рецепт'
         verbose_name_plural = 'Избранные рецепты'
-        constraints = (
-            models.UniqueConstraint(
-                fields=('user', 'recipe'),
-                name='unique_favoriterecipe'
-            ),
-        )

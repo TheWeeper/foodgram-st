@@ -6,15 +6,14 @@ class CookingTimeFilter(admin.SimpleListFilter):
     title = 'Время готовки'
     parameter_name = 'cooking_time'
     fast = None
-    medium = None
-    
+    medium = None  
 
     def lookups(self, request, model_admin):
         queryset = model_admin.get_queryset(request)
-        self.fast = int(queryset.aggregate(
-            Avg('cooking_time'))['cooking_time__avg'] * 0.75)
-        self.medium = int(queryset.aggregate(
-            Avg('cooking_time'))['cooking_time__avg'] * 1.25)
+        avg_cooking_time = queryset.aggregate(
+            Avg('cooking_time'))['cooking_time__avg']
+        self.fast = int(avg_cooking_time * 0.75)
+        self.medium = int(avg_cooking_time * 1.25)
         fast_count = queryset.filter(
             cooking_time__lte=self.fast).count()
         medium_count = queryset.filter(
@@ -28,7 +27,6 @@ class CookingTimeFilter(admin.SimpleListFilter):
         ]
 
     def queryset(self, request, queryset):
-        print(queryset, request)
         value = self.value()
         if not value or not queryset:
             return queryset

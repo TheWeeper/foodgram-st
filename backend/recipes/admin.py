@@ -11,15 +11,14 @@ from .models import (
 User = get_user_model()
 
 
-class GetRecipesMixin(admin.ModelAdmin):
-
-    @admin.display(description='Количество рецептов')
+class GetRecipesMixin:
+    @admin.display(description='Рецепты')
     def get_recipes(self, model):
         return model.recipes.count()
 
 
 @admin.register(Ingredient)
-class IngredientAdmin(GetRecipesMixin):
+class IngredientAdmin(admin.ModelAdmin, GetRecipesMixin):
     list_display = ('id', 'name', 'measurement_unit', 'get_recipes')
     list_editable = ('name', 'measurement_unit')
     search_fields = ('name', 'measurement_unit')
@@ -62,9 +61,7 @@ class RecipeAdmin(admin.ModelAdmin):
     @admin.display(description='Изображение')
     @mark_safe
     def get_image(self, recipe):
-        if recipe.image:
-            return f'<img src="{recipe.image.url}" style="height: 100px;" />'
-        return "Нет изображения"
+        return f'<img src="{recipe.image.url}" style="height: 100px;" />'
 
 
 @admin.register(User)
@@ -92,11 +89,11 @@ class FoodgramUserAdmin(UserAdmin, GetRecipesMixin):
                     'style="width:50 px;border-radius:50%;" />')
         return 'Нет аватара'
 
-    @admin.display(description='Количество подписок')
+    @admin.display(description='Подписки')
     def get_subscriptions(self, user):
         return user.subscribers.count()
 
-    @admin.display(description='Количество подписчиков')
+    @admin.display(description='Подписчики')
     def get_subscribers(self, user):
         return user.authors.count()
 
